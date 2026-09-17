@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // DATABASE_URL: connection pooling (porta 6543, pgbouncer) — usada pelo app em runtime.
+  url       = env("DATABASE_URL")
+  // DIRECT_URL: conexão direta (porta 5432) — usada só pelo `prisma migrate`, que não
+  // funciona bem através do pgbouncer em modo transaction.
+  directUrl = env("DIRECT_URL")
+}
+
+model Produto {
+  id                    Int      @id @default(autoincrement())
+  nome                  String
+  descricao             String
+  precoCents            Int
+  imagemUrl             String
+  categoria             String
+  tamanhos              String[]
+  cores                 String[]
+  permitePersonalizacao Boolean  @default(false)
+  ativo                 Boolean  @default(true)
+  criadoEm              DateTime @default(now())
+
+  // Peso e dimensões de uma unidade embalada, usados pro cálculo de frete (Melhor Envio).
+  pesoGramas    Int @default(300)
+  alturaCm      Int @default(3)
+  larguraCm     Int @default(25)
+  comprimentoCm Int @default(32)
+
+  itensPedido ItemPedido[]
+}
+
+model Pedido {
+  id                      String       @id @default(cuid())
+  mercadopagoPaymentId    String?
+  mercadopagoPreferenceId String?
+  linkPagamento           String?      @db.Text
+  clienteNome             String
+  clienteCpf              String
+  clienteEmail            String
+  clienteTelefone         String
+  enderecoCep             String
+  enderecoLogradouro      String
+  enderecoNumero          String
+  enderecoComplemento     String?
+  enderecoBairro          String
+  enderecoCidade          String
+  enderecoEstado          String
+  itens                   ItemPedido[]
+  itensCents              Int          @default(0)
+  freteCents              Int          @default(0)
+  freteServico            String?
+  fretePrazoDias          Int?
+  valorTotalCents         Int
+  metodoPagamento         String
+  parcelas                Int          @default(1)
+  statusPedido            String
+  qrCodePix               String?      @db.Text
+  qrCodePixBase64         String?      @db.Text
+  mercadopagoRaw          Json?
+  dataCriacao             DateTime     @default(now())
+  dataPagamento           DateTime?
+
+  @@index([statusPedido])
+  @@index([mercadopagoPaymentId])
+}
+
+model ItemPedido {
+  id                  String  @id @default(cuid())
+  pedidoId            String
+  pedido              Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produtoId           Int
+  produto             Produto @relation(fields: [produtoId], references: [id])
+  nomeProduto         String
+  precoUnitarioCents  Int
+  tamanho             String?
+  cor                 String?
+  nomePersonalizado   String?
+  numeroPersonalizado String?
+
+  @@index([pedidoId])
+  @@index([produtoId])
+}
+
+model ConfiguracaoLoja {
+  id                   Int       @id @default(1)
+  vendasAbertas        Boolean   @default(true)
+  dataLimite           DateTime?
+  mensagemEncerramento String    @default("As vendas deste lote estão encerradas. Fique de olho para o próximo período de pedidos.")
+}
+
+model AdminUser {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  senhaHash        String
+  nome             String
+  criadoEm         DateTime  @default(now())
+  tentativasFalhas Int       @default(0)
+  bloqueadoAte     DateTime?
+}
+
+model Noticia {
+  id          String    @id @default(cuid())
+  titulo      String
+  resumo      String
+  conteudo    String    @db.Text
+  imagemUrl   String?
+  ativo       Boolean   @default(false)
+  publicadoEm DateTime  @default(now())
+  criadoEm    DateTime  @default(now())
+
+  @@index([ativo, publicadoEm])
+}
+
+model Video {
+  id          String   @id @default(cuid())
+  titulo      String
+  youtubeId   String
+  ordem       Int      @default(0)
+  ativo       Boolean  @default(true)
+  criadoEm    DateTime @default(now())
+
+  @@index([ativo, ordem])
+}
+
+model Jogo {
+  id         String    @id @default(cuid())
+  temporada  String
+  adversario String
+  dataHora   DateTime
+  local      String
+  mandante   Boolean   @default(true)
+  golsPro    Int?
+  golsContra Int?
+  ativo      Boolean   @default(true)
+  criadoEm   DateTime  @default(now())
+
+  @@index([temporada, dataHora])
+}
+
+model MensagemContato {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String
+  telefone  String
+  assunto   String
+  mensagem  String   @db.Text
+  criadoEm  DateTime @default(now())
+
+  @@index([criadoEm])
+}
+
+model InscricaoSeletiva {
+  id                       String    @id @default(cuid())
+  nomeCompleto             String
+  dataNascimento           DateTime
+  alturaCm                 Int
+  pesoKg                   Float
+  cidade                   String
+  email                    String
+  telefone                 String
+  conheceFutebolAmericano  Boolean
+  praticaEsporte           Boolean
+  qualEsporte              String?
+  tempoPratica             String?
+  indicadoPorAtleta        Boolean
+  nomeIndicacao            String?
+  valorCents               Int       @default(5000)
+  statusPagamento          String    @default("pendente")
+  mercadopagoPaymentId     String?
+  mercadopagoRaw           Json?
+  criadoEm                 DateTime  @default(now())
+  dataPagamento            DateTime?
+
+  @@index([statusPagamento])
+  @@index([mercadopagoPaymentId])
+}
